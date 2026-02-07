@@ -1,0 +1,16 @@
+{
+	on_demand_tls {
+		ask http://127.0.0.1:7001/caddy-check
+	}
+}
+
+:443 {
+	tls {
+		on_demand
+	}
+	reverse_proxy 127.0.0.1:7001
+}
+
+:80 {
+	redir https://{host}{uri} permanent
+}

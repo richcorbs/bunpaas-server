@@ -1,0 +1,23 @@
+node_modules/
+
+# Bun
+bun.lockb
+
+# Environment / secrets
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Test / build artifacts
+coverage/
+*.tar.gz

@@ -1,0 +1,18 @@
+{
+  "name": "richhost-paas-bun",
+  "version": "1.0.0",
+  "description": "Lightweight Bun PaaS for static sites with serverless functions",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "bun run server.js",
+    "dev": "NODE_ENV=development bun --watch server.js",
+    "dev:no-watch": "NODE_ENV=development bun run server.js",
+    "test": "bun test"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
