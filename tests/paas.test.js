@@ -310,6 +310,13 @@ describe("Basic Auth", () => {
 });
 
 describe("Site Handling", () => {
+  test("routes .localhost hosts directly without translation", async () => {
+    const res = await request("/");
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toContain("Home");
+  });
+
   test("returns 404 for unknown hosts", async () => {
     const res = await request("/", { host: "unknown.localhost" });
     expect(res.status).toBe(404);
