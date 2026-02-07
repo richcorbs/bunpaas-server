@@ -1,5 +1,5 @@
 {
-  "name": "richhost-paas-bun",
+  "name": "bunpaas-server",
   "version": "1.0.0",
   "description": "Lightweight Bun PaaS for static sites with serverless functions",
   "type": "module",

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RichHost PaaS Setup Script
+ * BunPaaS Setup Script
  *
  * Run this once to initialize:
  *   sudo node setup.js
@@ -62,7 +62,7 @@ function generateKey(prefix, length = 32) {
 
 async function setup() {
   console.log("\n========================================");
-  console.log("  RichHost PaaS Setup");
+  console.log("  BunPaaS Setup");
   console.log("========================================\n");
 
   // Check if running as root (needed for /var/www)

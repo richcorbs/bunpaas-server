@@ -1,6 +1,6 @@
 import { handleRequest } from "./lib/router.js";
 import { getSiteByHost } from "./lib/sites.js";
-import { DATA_DIR, isDev } from "./lib/config.js";
+import { DATA_DIR } from "./lib/config.js";
 
 // Simple rate limiter (in-memory)
 const rateLimits = new Map();
@@ -72,7 +72,7 @@ export async function createHandler() {
 
     // Main request handler
     try {
-      return await handleRequest(req, { dataDir: DATA_DIR, isDev });
+      return await handleRequest(req, { dataDir: DATA_DIR });
     } catch (err) {
       console.error("Request error:", err);
       return new Response("Internal Server Error", { status: 500 });

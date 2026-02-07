@@ -1,4 +1,4 @@
-# RichHost PaaS (Bun)
+# BunPaaS Server
 
 A lightweight Bun-based PaaS for hosting static sites with serverless functions. Zero npm dependencies.
 
@@ -39,7 +39,7 @@ A lightweight Bun-based PaaS for hosting static sites with serverless functions.
 
 2. **Add hosts entries:**
    ```bash
-   sudo sh -c 'echo "127.0.0.1 paas.localhost paas-admin.localhost" >> /etc/hosts'
+   sudo sh -c 'echo "127.0.0.1 bunpaas-admin.localhost" >> /etc/hosts'
    ```
 
 3. **Create data directory:**
@@ -54,7 +54,7 @@ A lightweight Bun-based PaaS for hosting static sites with serverless functions.
    ```
 
 5. **Access:**
-   - http://paas-admin.localhost:7001
+   - http://bunpaas-admin.localhost:7001
 
 ## Production (Ubuntu 22.04+)
 
@@ -83,8 +83,8 @@ sudo apt install caddy
 ```bash
 # Clone to /opt
 cd /opt
-sudo git clone <repo-url> richhost
-sudo chown -R $USER:$USER /opt/richhost
+sudo git clone <repo-url> bunpaas
+sudo chown -R $USER:$USER /opt/bunpaas
 
 # Create data directory
 sudo mkdir -p /var/www/sites
@@ -94,7 +94,7 @@ sudo chown -R $USER:$USER /var/www
 ### 4. Configure Caddy
 
 ```bash
-sudo cp /opt/richhost/paas-bun/Caddyfile /etc/caddy/Caddyfile
+sudo cp /opt/bunpaas/bunpaas-server/Caddyfile /etc/caddy/Caddyfile
 ```
 
 Or create `/etc/caddy/Caddyfile`:
@@ -121,24 +121,24 @@ Or create `/etc/caddy/Caddyfile`:
 ### 5. Create systemd service for PaaS
 
 ```bash
-sudo tee /etc/systemd/system/richhost.service > /dev/null << 'EOF'
+sudo tee /etc/systemd/system/bunpaas.service > /dev/null << 'EOF'
 [Unit]
-Description=RichHost PaaS (Bun)
+Description=BunPaaS Server
 After=network.target
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/richhost/paas-bun
+WorkingDirectory=/opt/bunpaas/bunpaas-server
 ExecStart=/root/.bun/bin/bun run server.js
 Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=richhost
+SyslogIdentifier=bunpaas
 Environment=NODE_ENV=production
-Environment=RICHHOST_DATA_DIR=/var/www
-Environment=RICHHOST_PORT=7001
+Environment=BUNPAAS_DATA_DIR=/var/www
+Environment=BUNPAAS_PORT=7001
 
 [Install]
 WantedBy=multi-user.target
@@ -154,15 +154,15 @@ EOF
 sudo systemctl daemon-reload
 
 # Enable services (start on boot)
-sudo systemctl enable richhost
+sudo systemctl enable bunpaas
 sudo systemctl enable caddy
 
 # Start services
-sudo systemctl start richhost
+sudo systemctl start bunpaas
 sudo systemctl start caddy
 
 # Check status
-sudo systemctl status richhost
+sudo systemctl status bunpaas
 sudo systemctl status caddy
 ```
 
@@ -188,17 +188,17 @@ curl -k https://127.0.0.1/health
 
 ```bash
 # View logs
-sudo journalctl -u richhost -f
+sudo journalctl -u bunpaas -f
 sudo journalctl -u caddy -f
 
 # Restart after code changes
-sudo systemctl restart richhost
+sudo systemctl restart bunpaas
 
 # Reload Caddy config (no downtime)
 sudo systemctl reload caddy
 
 # Stop services
-sudo systemctl stop richhost
+sudo systemctl stop bunpaas
 sudo systemctl stop caddy
 ```
 
@@ -206,7 +206,7 @@ sudo systemctl stop caddy
 
 1. **Create site via admin UI** or API:
    ```bash
-   curl -X PUT https://paas-admin.example.com/sites/mysite.com \
+   curl -X PUT https://bunpaas-admin.example.com/sites/mysite.com \
      -H "X-API-Key: YOUR_API_KEY" \
      -H "Content-Type: application/json" \
      -d '{"enabled": true}'
@@ -329,17 +329,11 @@ Run the test suite:
 bun test
 ```
 
-## Benchmarks
-
-```bash
-./tests/benchmark.sh
-```
-
 ## Troubleshooting
 
 **PaaS won't start:**
 ```bash
-sudo journalctl -u richhost -n 50
+sudo journalctl -u bunpaas -n 50
 ```
 
 **Caddy won't start:**
@@ -354,8 +348,8 @@ caddy validate --config /etc/caddy/Caddyfile
 - Check Caddy logs: `sudo journalctl -u caddy -f`
 
 **502 Bad Gateway:**
-- PaaS not running: `sudo systemctl status richhost`
-- Wrong port: verify `RICHHOST_PORT=7001` matches Caddyfile
+- PaaS not running: `sudo systemctl status bunpaas`
+- Wrong port: verify `BUNPAAS_PORT=7001` matches Caddyfile
 
 ## Directory Structure
 

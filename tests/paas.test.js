@@ -6,7 +6,6 @@ import path from "path";
 const PORT = 7099;
 const TEST_DATA_DIR = `/tmp/paas-test-${process.pid}`;
 const TEST_HOST = "test-site.localhost";
-const TEST_HOST_INTERNAL = "test-site.richcorbs.com";
 
 let serverProc;
 
@@ -24,7 +23,7 @@ async function request(path, options = {}) {
 
 beforeAll(async () => {
   // Create test fixtures
-  const siteDir = `${TEST_DATA_DIR}/sites/${TEST_HOST_INTERNAL}/current`;
+  const siteDir = `${TEST_DATA_DIR}/sites/${TEST_HOST}/current`;
   const functionsDir = `${siteDir}/_functions`;
   const dynamicDir = `${functionsDir}/users/[id]`;
 
@@ -38,17 +37,17 @@ beforeAll(async () => {
   // sites.json
   await fs.writeFile(`${TEST_DATA_DIR}/sites.json`, JSON.stringify({
     sites: {
-      [TEST_HOST_INTERNAL]: {
+      [TEST_HOST]: {
         enabled: true,
         deployKey: "dk_test123",
         env: { ADMIN_USERNAME: "admin", ADMIN_PASSWORD_HASH: passHash, TEST_VAR: "hello" },
       },
-      "disabled-site.richcorbs.com": {
+      "disabled-site.localhost": {
         enabled: false,
         deployKey: "dk_disabled",
         env: {},
       },
-      "auth-site.richcorbs.com": {
+      "auth-site.localhost": {
         enabled: true,
         deployKey: "dk_auth",
         env: { ADMIN_USERNAME: "admin", ADMIN_PASSWORD_HASH: passHash },
@@ -63,7 +62,7 @@ beforeAll(async () => {
   }));
 
   // Auth site
-  const authSiteDir = `${TEST_DATA_DIR}/sites/auth-site.richcorbs.com/current`;
+  const authSiteDir = `${TEST_DATA_DIR}/sites/auth-site.localhost/current`;
   await fs.mkdir(authSiteDir, { recursive: true });
   await fs.writeFile(`${authSiteDir}/site.json`, JSON.stringify({ auth: "basic" }));
   await fs.writeFile(`${authSiteDir}/index.html`, "<h1>Protected</h1>");
@@ -119,8 +118,8 @@ export function get(req) {
     env: {
       ...process.env,
       NODE_ENV: "development",
-      RICHHOST_DATA_DIR: TEST_DATA_DIR,
-      RICHHOST_PORT: String(PORT),
+      BUNPAAS_DATA_DIR: TEST_DATA_DIR,
+      BUNPAAS_PORT: String(PORT),
     },
     stdout: "ignore",
     stderr: "ignore",

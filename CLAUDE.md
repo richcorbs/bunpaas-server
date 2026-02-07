@@ -1,4 +1,4 @@
-# PaaS - Claude Context
+# BunPaaS Server - Claude Context
 
 Lightweight Bun-based PaaS for hosting static sites with serverless functions. Zero npm dependencies.
 
@@ -17,7 +17,7 @@ Caddy (:80/:443) → Bun.serve() (:7001) → Router → Functions/Static
 ## File Structure
 
 ```
-paas/
+bunpaas-server/
 ├── server.js          # Entry point, Bun.serve(), graceful shutdown
 ├── app.js             # Request handler factory, rate limiting, health check
 ├── lib/
@@ -31,12 +31,12 @@ paas/
 │   └── middleware/
 │       └── auth.js    # Basic auth with bcrypt (Bun native)
 └── tests/
-    └── run-tests.sh   # Bash test suite (40 tests)
+    └── paas.test.js   # Bun test suite
 ```
 
 ## Request Flow (router.js)
 
-1. Extract host (in dev: `.localhost` → `RICHHOST_PROD_SUFFIX` or `.richcorbs.com`)
+1. Extract host from request
 2. Look up site in sites.json
 3. If unknown host → 404
 4. If disabled → 503
@@ -150,19 +150,15 @@ export default function(req) { return { body: { method: req.method } }; }
 
 ## Environment Variables
 
-- `RICHHOST_DATA_DIR` - Data directory (default: `/var/www`)
-- `RICHHOST_PORT` - Server port (default: `7001` dev, `443` prod)
-- `RICHHOST_PROD_SUFFIX` - Production domain suffix for dev mode (default: `.richcorbs.com`)
+- `BUNPAAS_DATA_DIR` - Data directory (default: `/var/www`)
+- `BUNPAAS_PORT` - Server port (default: `7001` dev, `443` prod)
 - `NODE_ENV` - `development` enables dev features
 
 ## Testing
 
 ```bash
-cd paas
 bun test
 ```
-
-40 tests covering: health check, static files, functions, CORS, auth, site handling, rate limiting, trailing slash, security headers, redirects, custom error pages.
 
 ## Key Design Decisions
 
@@ -172,23 +168,12 @@ bun test
 4. **Simple caching**: No Redis, just in-memory with mtime checks
 5. **Atomic writes**: sites.json uses temp file + rename
 
-## Future: Cron (Not Implemented)
-
-Designed but not built. Would be a standalone script run by system cron:
-
-```bash
-* * * * * bun /opt/richhost/paas/cron.js minute
-0 * * * * bun /opt/richhost/paas/cron.js hourly
-```
-
-Would scan sites for `_functions/_cron/{schedule}.js` and execute them.
-
 ## Common Tasks
 
-**Add a site:** Via paas-admin API or directly edit sites.json
+**Add a site:** Via bunpaas-admin UI or directly edit sites.json
 
 **Deploy:** POST tarball to `/deploy` with `X-Deploy-Key` and `X-Target-Host` headers
 
-**Debug:** `journalctl -u richhost -f` or check `/var/www/logs/{host}.json`
+**Debug:** `journalctl -u bunpaas -f` or check `/var/www/logs/{host}.json`
 
-**Restart:** `sudo systemctl restart richhost`
+**Restart:** `sudo systemctl restart bunpaas`

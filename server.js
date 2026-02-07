@@ -1,5 +1,5 @@
 import { createHandler } from "./app.js";
-import { isDev, PORT } from "./lib/config.js";
+import { PORT } from "./lib/config.js";
 import { shutdown as shutdownLogs } from "./lib/logs.js";
 
 const handler = await createHandler();
@@ -10,13 +10,6 @@ const server = Bun.serve({
 });
 
 console.log(`Bun server running at http://localhost:${server.port}`);
-if (isDev) {
-  const hosts = await Bun.file("/etc/hosts").text().catch(() => "");
-  if (!hosts.includes("paas-admin.localhost")) {
-    console.log(`\nWarning: paas-admin.localhost not found in /etc/hosts`);
-    console.log(`Add: 127.0.0.1 paas-admin.localhost`);
-  }
-}
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
