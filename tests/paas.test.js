@@ -52,6 +52,11 @@ beforeAll(async () => {
         deployKey: "dk_auth",
         env: { ADMIN_USERNAME: "admin", ADMIN_PASSWORD_HASH: passHash },
       },
+      "path-auth-site.localhost": {
+        enabled: true,
+        deployKey: "dk_pathauth",
+        env: { ADMIN_USERNAME: "admin", ADMIN_PASSWORD_HASH: passHash },
+      },
     },
   }));
 
@@ -66,6 +71,16 @@ beforeAll(async () => {
   await fs.mkdir(authSiteDir, { recursive: true });
   await fs.writeFile(`${authSiteDir}/site.json`, JSON.stringify({ auth: "basic" }));
   await fs.writeFile(`${authSiteDir}/index.html`, "<h1>Protected</h1>");
+
+  // Path-auth site (only /admin is protected)
+  const pathAuthSiteDir = `${TEST_DATA_DIR}/sites/path-auth-site.localhost/current`;
+  const pathAuthAdminDir = `${pathAuthSiteDir}/admin`;
+  await fs.mkdir(pathAuthAdminDir, { recursive: true });
+  await fs.writeFile(`${pathAuthSiteDir}/site.json`, JSON.stringify({
+    auth: { type: "basic", paths: ["/admin"] },
+  }));
+  await fs.writeFile(`${pathAuthSiteDir}/index.html`, "<h1>Public</h1>");
+  await fs.writeFile(`${pathAuthAdminDir}/index.html`, "<h1>Admin</h1>");
 
   // Static files
   await fs.writeFile(`${siteDir}/index.html`, "<h1>Home</h1>");
@@ -306,6 +321,30 @@ describe("Basic Auth", () => {
       headers: { Authorization: "Basic " + btoa("admin:secret") },
     });
     expect(res.status).toBe(200);
+  });
+});
+
+describe("Path-Based Auth", () => {
+  test("allows public path without credentials", async () => {
+    const res = await request("/", { host: "path-auth-site.localhost" });
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toContain("Public");
+  });
+
+  test("returns 401 for protected path without credentials", async () => {
+    const res = await request("/admin", { host: "path-auth-site.localhost" });
+    expect(res.status).toBe(401);
+  });
+
+  test("allows protected path with correct credentials", async () => {
+    const res = await request("/admin", {
+      host: "path-auth-site.localhost",
+      headers: { Authorization: "Basic " + btoa("admin:secret") },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toContain("Admin");
   });
 });
 
