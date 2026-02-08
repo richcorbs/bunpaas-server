@@ -111,6 +111,22 @@ export function get(req) {
 }
 `);
 
+  await fs.writeFile(`${functionsDir}/events.js`, `
+export function get(req) {
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue("data: hello\\n\\n");
+      controller.enqueue("data: world\\n\\n");
+      controller.close();
+    },
+  });
+  return {
+    headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+    body: stream,
+  };
+}
+`);
+
   await fs.writeFile(`${dynamicDir}/index.js`, `
 export function get(req) {
   return { body: { userId: req.params.id } };
@@ -271,6 +287,14 @@ describe("Functions", () => {
   test("respects custom headers", async () => {
     const res = await request("/status");
     expect(res.headers.get("x-custom")).toBe("header");
+  });
+
+  test("streams SSE response", async () => {
+    const res = await request("/events");
+    expect(res.headers.get("content-type")).toBe("text/event-stream");
+    const body = await res.text();
+    expect(body).toContain("data: hello");
+    expect(body).toContain("data: world");
   });
 });
 
