@@ -1,5 +1,5 @@
 import { handleRequest } from "./lib/router.js";
-import { getSiteByHost } from "./lib/sites.js";
+import { getSiteByHost, invalidateSitesCache } from "./lib/sites.js";
 import { DATA_DIR } from "./lib/config.js";
 
 // Simple rate limiter (in-memory)
@@ -64,6 +64,8 @@ export async function createHandler() {
       if (!domain) {
         return new Response("Missing domain parameter", { status: 400 });
       }
+      // Invalidate cache to always check fresh sites.json
+      invalidateSitesCache();
       const site = await getSiteByHost(DATA_DIR, domain);
       return new Response(site ? "OK" : "Not found", {
         status: site?.enabled ? 200 : 404,
