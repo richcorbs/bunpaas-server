@@ -110,7 +110,9 @@ export default function(req) { return { body: { method: req.method } }; }
   headers: { ... },
   body: { ... },           // Parsed JSON, text, or Buffer
   params: { id: "123" },   // From dynamic routes
-  env: { API_KEY: "..." }  // From sites.json env
+  env: { API_KEY: "..." },  // From sites.json env
+  subscribe: Function,      // Subscribe to a real-time channel
+  publish: Function,        // Publish to a real-time channel
 }
 ```
 
@@ -119,8 +121,40 @@ export default function(req) { return { body: { method: req.method } }; }
 {
   status: 200,             // Optional, defaults to 200
   headers: { ... },        // Optional
-  body: object | string | Buffer | null
+  body: object | string | Buffer | ReadableStream | null
 }
+```
+
+## Real-time Channels
+
+Functions can use `req.subscribe()` and `req.publish()` for SSE-based real-time communication. Channels are automatically namespaced per site.
+
+**`req.subscribe(channel)`** — Returns an SSE response object. Use in a GET handler. Clients connect with `new EventSource(url)`.
+
+**`req.publish(channel, data)`** — Sends data to all subscribers on that channel. Objects are auto-stringified as JSON. Call from any handler.
+
+Channel names are arbitrary strings (`board:123`, `chat:lobby`, `notifications`).
+
+```js
+// _functions/events.js — Subscribe
+export function get(req) {
+  return req.subscribe(req.query.channel || "general");
+}
+
+// _functions/broadcast.js — Publish
+export function post(req) {
+  req.publish(req.body.channel, req.body.message);
+  return { body: { sent: true } };
+}
+```
+
+**Client usage:**
+```js
+const es = new EventSource("/events?channel=board:123");
+es.onmessage = (e) => {
+  const data = JSON.parse(e.data);
+  // Handle real-time update
+};
 ```
 
 ## Redirects (_redirects)

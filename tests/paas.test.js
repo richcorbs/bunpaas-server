@@ -111,19 +111,16 @@ export function get(req) {
 }
 `);
 
-  await fs.writeFile(`${functionsDir}/events.js`, `
+  await fs.writeFile(`${functionsDir}/subscribe.js`, `
 export function get(req) {
-  const stream = new ReadableStream({
-    start(controller) {
-      controller.enqueue("data: hello\\n\\n");
-      controller.enqueue("data: world\\n\\n");
-      controller.close();
-    },
-  });
-  return {
-    headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
-    body: stream,
-  };
+  return req.subscribe(req.query.channel || "default");
+}
+`);
+
+  await fs.writeFile(`${functionsDir}/publish.js`, `
+export function post(req) {
+  req.publish(req.body.channel, req.body.message);
+  return { body: { sent: true } };
 }
 `);
 
@@ -289,12 +286,36 @@ describe("Functions", () => {
     expect(res.headers.get("x-custom")).toBe("header");
   });
 
-  test("streams SSE response", async () => {
-    const res = await request("/events");
+  test("subscribe returns SSE headers", async () => {
+    const res = await request("/subscribe?channel=test-headers");
     expect(res.headers.get("content-type")).toBe("text/event-stream");
-    const body = await res.text();
-    expect(body).toContain("data: hello");
-    expect(body).toContain("data: world");
+    expect(res.headers.get("cache-control")).toBe("no-cache");
+  });
+
+  test("publish delivers message to subscriber", async () => {
+    // Subscribe
+    const subRes = await request("/subscribe?channel=test-pub");
+    const reader = subRes.body.getReader();
+    const decoder = new TextDecoder();
+
+    // Read the initial retry message
+    const { value: initial } = await reader.read();
+    expect(decoder.decode(initial)).toContain("retry:");
+
+    // Publish a message
+    await request("/publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: { channel: "test-pub", message: { greeting: "hello" } },
+    });
+
+    // Read the published message
+    const { value } = await reader.read();
+    const text = decoder.decode(value);
+    expect(text).toContain("data:");
+    expect(text).toContain("hello");
+
+    reader.cancel();
   });
 });
 
