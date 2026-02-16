@@ -27,7 +27,7 @@ bunpaas-server/
 │   ├── functions.js   # Serverless function loader, dynamic routes, timeouts
 │   ├── redirects.js   # _redirects file parsing and matching
 │   ├── sites.js       # sites.json management, site configs, caching
-│   ├── logs.js        # Buffered request logging (10s flush, 20 logs/site)
+│   ├── logs.js        # Buffered request + deploy logging (10s flush, 20 requests/50 deploys per site)
 │   └── middleware/
 │       └── auth.js    # Basic auth with bcrypt (Bun native)
 └── tests/
@@ -57,7 +57,8 @@ bunpaas-server/
 /var/www/
 ├── sites.json              # Global config: sites, deploy keys, env vars
 ├── logs/
-│   └── {host}.json         # Per-site request logs (last 20)
+│   ├── {host}-requests.json # Per-site request logs (last 20)
+│   └── {host}-deploys.json  # Per-site deploy history (last 50)
 └── sites/
     └── example.com/
         ├── current/        # Active deployment (symlink target)
@@ -66,7 +67,7 @@ bunpaas-server/
         │   ├── _redirects  # Redirect rules
         │   ├── 404.html    # Custom error page (optional)
         │   └── _functions/ # Serverless functions
-        └── deploys/        # Deploy history
+        └── _deploys/      # Deploy directories on disk
 ```
 
 ## Site Configuration (site.json)
