@@ -22,7 +22,7 @@ bunpaas-server/
 ├── app.js             # Request handler factory, rate limiting, health check
 ├── lib/
 │   ├── config.js      # DATA_DIR, isDev, PORT from env
-│   ├── router.js      # Main dispatcher: auth → redirects → functions → static → 404
+│   ├── router.js      # Main dispatcher: auth → redirects → static → functions → 404
 │   ├── static.js      # Static file serving, pretty URLs, blocked paths, error pages
 │   ├── functions.js   # Serverless function loader, dynamic routes, timeouts
 │   ├── redirects.js   # _redirects file parsing and matching
@@ -44,8 +44,8 @@ bunpaas-server/
 6. Basic auth check (if `site.json` has `"auth": "basic"`)
 7. CORS preflight handling
 8. Check `_redirects` file
-9. Try function handler (`_functions/`)
-10. Try static file
+9. Try static file
+10. Try function handler (`_functions/`)
 11. Serve custom error page or plain text 404
 12. Add security headers
 13. Add CORS headers
@@ -186,7 +186,8 @@ es.onmessage = (e) => {
 ## Environment Variables
 
 - `BUNPAAS_DATA_DIR` - Data directory (default: `/var/www`)
-- `BUNPAAS_PORT` - Server port (default: `7001` dev, `443` prod)
+- `BUNPAAS_PORT` - Server port (default: `7001`)
+- `BUNPAAS_TRUST_PROXY` - Proxy trust mode for `X-Forwarded-For` (`loopback`, `always`, `never`; default `loopback`)
 - `NODE_ENV` - `development` enables dev features
 
 ## Testing

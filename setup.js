@@ -1,9 +1,9 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * BunPaaS Setup Script
  *
  * Run this once to initialize:
- *   sudo node setup.js
+ *   sudo bun run setup.js
  *
  * This script:
  * 1. Creates /var/www directory structure
@@ -15,7 +15,6 @@ import { promises as fs } from "fs";
 import path from "path";
 import { createInterface } from "readline";
 import { randomBytes } from "crypto";
-import bcrypt from "bcrypt";
 
 const DATA_DIR = "/var/www";
 
@@ -102,7 +101,7 @@ async function setup() {
 
   // Hash password
   console.log("\nGenerating credentials...");
-  const passwordHash = await bcrypt.hash(adminPassword, 12);
+  const passwordHash = await Bun.password.hash(adminPassword, { algorithm: "bcrypt", cost: 12 });
   const apiKey = generateKey("ak");
   const adminDeployKey = generateKey("dk");
 
@@ -150,7 +149,7 @@ async function setup() {
   console.log(`  ${adminHost}: ${adminDeployKey}`);
   console.log("\nNext steps:");
   console.log("  1. Deploy admin site");
-  console.log("  2. Start the server: npm run dev");
+  console.log("  2. Start the server: bun run dev");
   console.log(`  3. Visit https://${adminHost} to manage sites\n`);
 }
 

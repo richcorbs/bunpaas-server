@@ -1,11 +1,12 @@
 import { handleRequest } from "./lib/router.js";
 import { getSiteByHost, invalidateSitesCache } from "./lib/sites.js";
-import { DATA_DIR } from "./lib/config.js";
+import { DATA_DIR, TRUST_PROXY } from "./lib/config.js";
 
 // Simple rate limiter (in-memory)
 const rateLimits = new Map();
 const RATE_LIMIT_WINDOW = 60000;
 const RATE_LIMIT_MAX = 100;
+const RATE_LIMIT_EXEMPT_PATHS = new Set(["/health", "/caddy-check"]);
 
 function checkRateLimit(ip) {
   const now = Date.now();
@@ -24,6 +25,34 @@ function checkRateLimit(ip) {
   return true;
 }
 
+function isLoopback(ip) {
+  return ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+}
+
+function shouldTrustForwardedHeaders(peerIp) {
+  if (TRUST_PROXY === "always") return true;
+  if (TRUST_PROXY === "never") return false;
+  return isLoopback(peerIp);
+}
+
+function parseForwardedFor(value) {
+  if (!value) return null;
+  const first = value.split(",")[0]?.trim();
+  return first || null;
+}
+
+function getClientIp(req, server) {
+  const peerIp = server?.requestIP?.(req)?.address || "unknown";
+
+  if (!shouldTrustForwardedHeaders(peerIp)) {
+    return peerIp;
+  }
+
+  return parseForwardedFor(req.headers.get("x-forwarded-for")) ||
+    req.headers.get("x-real-ip") ||
+    peerIp;
+}
+
 // Clean up old rate limit entries periodically
 // .unref() allows process to exit even if timer is pending
 setInterval(() => {
@@ -36,12 +65,12 @@ setInterval(() => {
 }, 60000).unref();
 
 export async function createHandler() {
-  return async function fetch(req) {
+  return async function fetch(req, server) {
     const url = new URL(req.url);
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+    const ip = getClientIp(req, server);
 
     // Rate limiting
-    if (!checkRateLimit(ip)) {
+    if (!RATE_LIMIT_EXEMPT_PATHS.has(url.pathname) && !checkRateLimit(ip)) {
       return Response.json(
         { error: "Too many requests, please try again later." },
         { status: 429 }
@@ -74,7 +103,7 @@ export async function createHandler() {
 
     // Main request handler
     try {
-      return await handleRequest(req, { dataDir: DATA_DIR });
+      return await handleRequest(req, { dataDir: DATA_DIR, clientIp: ip });
     } catch (err) {
       console.error("Request error:", err);
       return new Response("Internal Server Error", { status: 500 });

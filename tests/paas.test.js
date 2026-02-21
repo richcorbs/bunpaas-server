@@ -64,6 +64,7 @@ beforeAll(async () => {
   await fs.writeFile(`${siteDir}/site.json`, JSON.stringify({
     cors: { origins: ["http://allowed.com"], credentials: true },
     cacheControl: "public, max-age=7200",
+    functionTimeout: 100,
   }));
 
   // Auth site
@@ -121,6 +122,13 @@ export function get(req) {
 export function post(req) {
   req.publish(req.body.channel, req.body.message);
   return { body: { sent: true } };
+}
+`);
+
+  await fs.writeFile(`${functionsDir}/slow.js`, `
+export async function get() {
+  await Bun.sleep(250);
+  return { body: { ok: true } };
 }
 `);
 
@@ -184,6 +192,23 @@ describe("Health Check", () => {
     const res = await fetch(`http://localhost:${PORT}/health`);
     const body = await res.json();
     expect(body.runtime).toBe("bun");
+  });
+
+  test("caddy-check requires domain", async () => {
+    const res = await fetch(`http://localhost:${PORT}/caddy-check`);
+    expect(res.status).toBe(400);
+  });
+
+  test("caddy-check allows enabled site", async () => {
+    const res = await fetch(`http://localhost:${PORT}/caddy-check?domain=${TEST_HOST}`);
+    expect(res.status).toBe(200);
+  });
+
+  test("caddy-check rejects disabled or unknown site", async () => {
+    const disabled = await fetch(`http://localhost:${PORT}/caddy-check?domain=disabled-site.localhost`);
+    const missing = await fetch(`http://localhost:${PORT}/caddy-check?domain=unknown.localhost`);
+    expect(disabled.status).toBe(404);
+    expect(missing.status).toBe(404);
   });
 });
 
@@ -258,6 +283,19 @@ describe("Functions", () => {
     expect(body.received.name).toBe("test");
   });
 
+  test("handles malformed JSON body as null", async () => {
+    const res = await fetch(`http://localhost:${PORT}/hello`, {
+      method: "POST",
+      headers: {
+        Host: TEST_HOST,
+        "Content-Type": "application/json",
+      },
+      body: "{ bad-json",
+    });
+    const body = await res.json();
+    expect(body.received).toBeNull();
+  });
+
   test("handles default export for any method", async () => {
     const res = await request("/echo?foo=bar", { method: "PUT" });
     const body = await res.json();
@@ -317,6 +355,11 @@ describe("Functions", () => {
 
     reader.cancel();
   });
+
+  test("returns 504 when function exceeds timeout", async () => {
+    const res = await request("/slow");
+    expect(res.status).toBe(504);
+  });
 });
 
 describe("CORS", () => {
@@ -337,6 +380,17 @@ describe("CORS", () => {
 
   test("ignores disallowed origin", async () => {
     const res = await request("/", { headers: { Origin: "http://evil.com" } });
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  test("does not add CORS headers when cors config missing", async () => {
+    const res = await request("/", {
+      host: "auth-site.localhost",
+      headers: {
+        Origin: "http://allowed.com",
+        Authorization: "Basic " + btoa("admin:secret"),
+      },
+    });
     expect(res.headers.get("access-control-allow-origin")).toBeNull();
   });
 });
@@ -366,6 +420,11 @@ describe("Basic Auth", () => {
       headers: { Authorization: "Basic " + btoa("admin:secret") },
     });
     expect(res.status).toBe(200);
+  });
+
+  test("does not bypass auth on /deploy path", async () => {
+    const res = await request("/deploy", { host: "auth-site.localhost" });
+    expect(res.status).toBe(401);
   });
 });
 
@@ -416,8 +475,11 @@ describe("Rate Limiting", () => {
   test("returns 429 when rate limited", async () => {
     let got429 = false;
     for (let i = 0; i < 101; i++) {
-      const res = await fetch(`http://localhost:${PORT}/health`, {
-        headers: { "X-Forwarded-For": `rate-test-${process.pid}` },
+      const res = await fetch(`http://localhost:${PORT}/`, {
+        headers: {
+          Host: TEST_HOST,
+          "X-Forwarded-For": `rate-test-${process.pid}`,
+        },
       });
       if (res.status === 429) {
         got429 = true;
@@ -454,6 +516,11 @@ describe("Security Headers", () => {
   test("includes Referrer-Policy", async () => {
     const res = await request("/");
     expect(res.headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
+  });
+
+  test("includes X-Request-Id", async () => {
+    const res = await request("/");
+    expect(res.headers.get("x-request-id")).toBeTruthy();
   });
 });
 
